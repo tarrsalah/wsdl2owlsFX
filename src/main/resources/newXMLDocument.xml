@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<rdf:RDF
+	xmlns=""
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:grounding="http://www.daml.org/services/owl-s/1.2/Grounding.owl#"
+	xmlns:owl="http://www.w3.org/2002/07/owl#"
+	xmlns:list="http://www.daml.org/services/owl-s/1.2/generic/ObjectList.owl#"
+	xmlns:expr="http://www.daml.org/services/owl-s/1.2/generic/Expression.owl#"
+	xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+	xmlns:service="http://www.daml.org/services/owl-s/1.2/Service.owl#"
+	xmlns:profile="http://www.daml.org/services/owl-s/1.2/Profile.owl#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+	xmlns:process="http://www.daml.org/services/owl-s/1.2/Process.owl#"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+	xml:base="">
+	<owl:Ontology rdf:about="">
+		<owl:imports rdf:resource="http://www.daml.org/services/owl-s/1.2/Grounding.owl"/>
+		<owl:imports rdf:resource="http://www.daml.org/services/owl-s/1.2/Profile.owl"/>
+	</owl:Ontology>
+	<service:Service rdf:ID="helloService">
+		<service:supports>
+			<grounding:WsdlGrounding rdf:ID="helloGrounding"/>
+		</service:supports>
+		<service:describedBy>
+			<process:AtomicProcess rdf:ID="helloProcess"/>
+		</service:describedBy>
+		<service:presents>
+			<profile:Profile rdf:ID="helloProfile"/>
+		</service:presents>
+	</service:Service>
+	<profile:Profile rdf:about="#helloProfile">
+		<profile:hasOutput>
+			<process:Output rdf:ID="greeting">
+				<process:parameterType rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+				>http://www.jj.org</process:parameterType>
+				<rdfs:label>greeting</rdfs:label>
+			</process:Output>
+		</profile:hasOutput>
+		<profile:hasInput>
+			<process:Input rdf:ID="name">
+				<process:parameterType rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+				>http://www.jj.org</process:parameterType>
+				<rdfs:label>name</rdfs:label>
+			</process:Input>
+		</profile:hasInput>
+		<profile:textDescription>hello(http://127.0.0.1/hello?wsdl#name:string) -&gt; (http://127.0.0.1/hello?wsdl#greeting:string)</profile:textDescription>
+		<profile:serviceName>hello</profile:serviceName>
+		<service:presentedBy rdf:resource="#helloService"/>
+	</profile:Profile>
+	<process:AtomicProcess rdf:about="#helloProcess">
+		<process:hasOutput rdf:resource="#greeting"/>
+		<process:hasInput rdf:resource="#name"/>
+		<service:describes rdf:resource="#helloService"/>
+		<rdfs:label>helloProcess</rdfs:label>
+	</process:AtomicProcess>
+	<grounding:WsdlGrounding rdf:about="#helloGrounding">
+		<grounding:hasAtomicProcessGrounding>
+			<grounding:WsdlAtomicProcessGrounding rdf:ID="helloAtomicProcessGrounding"/>
+		</grounding:hasAtomicProcessGrounding>
+		<service:supportedBy rdf:resource="#helloService"/>
+	</grounding:WsdlGrounding>
+	<grounding:WsdlAtomicProcessGrounding rdf:about="#helloAtomicProcessGrounding">
+		<grounding:wsdlOutput>
+			<grounding:WsdlOutputMessageMap>
+				<grounding:xsltTransformationString> </grounding:xsltTransformationString>
+				<grounding:wsdlMessagePart rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+				>http://127.0.0.1/hello?wsdl#greeting</grounding:wsdlMessagePart>
+				<grounding:owlsParameter rdf:resource="#greeting"/>
+			</grounding:WsdlOutputMessageMap>
+		</grounding:wsdlOutput>
+		<grounding:wsdlInput>
+			<grounding:WsdlInputMessageMap>
+				<grounding:xsltTransformationString> </grounding:xsltTransformationString>
+				<grounding:wsdlMessagePart rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+				>http://127.0.0.1/hello?wsdl#name</grounding:wsdlMessagePart>
+				<grounding:owlsParameter rdf:resource="#name"/>
+			</grounding:WsdlInputMessageMap>
+		</grounding:wsdlInput>
+		<grounding:wsdlOutputMessage rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+		>http://127.0.0.1/hello#helloResponse</grounding:wsdlOutputMessage>
+		<grounding:wsdlInputMessage rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+		>http://127.0.0.1/hello#hello</grounding:wsdlInputMessage>
+		<grounding:wsdlDocument rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+		>http://127.0.0.1/hello?wsdl</grounding:wsdlDocument>
+		<grounding:wsdlOperation>
+			<grounding:WsdlOperationRef>
+				<grounding:operation rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI"
+				>http://127.0.0.1/hello?wsdl#hello</grounding:operation>
+			</grounding:WsdlOperationRef>
+		</grounding:wsdlOperation>
+		<grounding:owlsProcess rdf:resource="#helloProcess"/>
+	</grounding:WsdlAtomicProcessGrounding>
+	<owl:Class rdf:about="http://www.jj.org"/>
+</rdf:RDF>
