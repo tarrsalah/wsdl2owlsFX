@@ -23,10 +23,8 @@
  */
 package org.tarrsalah.flycomp.wsdl2owlsfx.presentation;
 
-import javafx.collections.ObservableList;
 import javafx.concurrent.Worker;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
 /**
@@ -39,19 +37,6 @@ public class ViewUtils {
 	static public void refreshTableView(TableView<?> table) {
 		table.getColumns().get(0).setVisible(false);
 		table.getColumns().get(0).setVisible(true);
-
-	}
-
-	static public void bindColumnWidth(TableView<?> tableView) {
-		final ObservableList<TableColumn<?, ?>> columns
-				= (ObservableList<TableColumn<?, ?>>) tableView.getColumns();
-
-		final int size = columns.size();
-
-		columns.forEach(col -> {
-			col.prefWidthProperty().
-					bind(tableView.widthProperty().divide(size));
-		});
 
 	}
 

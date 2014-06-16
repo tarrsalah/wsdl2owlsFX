@@ -164,7 +164,6 @@ public class BonePresenter implements Initializable {
 
 		Stream.of(inputs, outputs).forEach(
 				tableView -> {
-					ViewUtils.bindColumnWidth(tableView);
 					tableView.getColumns().forEach((TableColumn c) -> {
 						c.setCellFactory(TextFieldTableCell.<Parameter>forTableColumn());
 					});
