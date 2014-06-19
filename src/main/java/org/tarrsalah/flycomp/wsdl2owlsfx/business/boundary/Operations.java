@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License
  *
  * Copyright 2014 tarrsalah.org.
@@ -21,37 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.tarrsalah.flycomp.wsdl2owlsfx.business.model;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import org.mindswap.wsdl.WSDLOperation;
-import org.mindswap.wsdl.WSDLParameter;
+package org.tarrsalah.flycomp.wsdl2owlsfx.business.boundary;
 
 /**
- * ParamFactory.java (UTF-8)
+ * Operations.java (UTF-8)
  *
- * Jun 11, 2014
- *
+ * Jun 19, 2014
  * @author tarrsalah.org
  */
-public class ParamFactory {
+public class Operations {
 
-	public static ObservableList<Parameter> getInputParams(WSDLOperation operation) {
-		return getParams(operation.getInputs());
-	}
-
-	public static ObservableList<Parameter> getOutputParams(WSDLOperation operation) {
-		return getParams(operation.getOutputs());
-	}
-
-	private static ObservableList<Parameter> getParams(List<WSDLParameter> parameters) {
-		return FXCollections.observableArrayList(parameters
-				.stream()
-				.parallel()
-				.map(Parameter::new)
-				.collect(Collectors.toList()));
-	}
 }

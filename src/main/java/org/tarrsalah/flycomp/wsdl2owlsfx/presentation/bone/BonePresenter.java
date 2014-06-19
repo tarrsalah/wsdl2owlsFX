@@ -28,11 +28,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.WeakHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -67,7 +69,6 @@ import org.mindswap.owl.OWLOntology;
 import org.mindswap.owls.vocabulary.OWLS;
 import org.mindswap.wsdl.WSDLOperation;
 import org.mindswap.wsdl.WSDLTranslator;
-import org.tarrsalah.flycomp.wsdl2owlsfx.App;
 import org.tarrsalah.flycomp.wsdl2owlsfx.business.boundary.OperationsAsync;
 import org.tarrsalah.flycomp.wsdl2owlsfx.business.model.ParamFactory;
 import org.tarrsalah.flycomp.wsdl2owlsfx.business.model.Parameter;
@@ -83,6 +84,7 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorView;
 public class BonePresenter implements Initializable {
 
 	private static final Logger LOG = Logger.getLogger(BonePresenter.class.getName());
+	public final static ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	@FXML
 	private TabPane tabPane;
@@ -129,6 +131,9 @@ public class BonePresenter implements Initializable {
 	@FXML
 	private ProgressIndicator progress;
 
+	// TODO: FIXME
+	// There is a duplication here !
+	// should be replacebale by on map pf object.field -> object
 	private final Map<WSDLOperation, ObservableList<Parameter>> currentInputsMap;
 	private final Map<WSDLOperation, ObservableList<Parameter>> currentOutputsMap;
 
@@ -136,8 +141,8 @@ public class BonePresenter implements Initializable {
 	private OperationsAsync operationsAsync;
 
 	public BonePresenter() {
-		currentInputsMap = new HashMap<>();
-		currentOutputsMap = new HashMap<>();
+		currentInputsMap = new WeakHashMap<>();
+		currentOutputsMap = new WeakHashMap<>();
 
 	}
 
@@ -153,10 +158,9 @@ public class BonePresenter implements Initializable {
 		generatorTab.setClosable(false);
 		importWsdl.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCodeCombination.CONTROL_DOWN));
 		exit.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCodeCombination.CONTROL_DOWN));
-//		viewOWLS.setDisable(true);
 		viewOWLS.disableProperty().bind(services.valueProperty().isNull());
 
-		operationsAsync.setExecutor(App.executor);
+		operationsAsync.setExecutor(executor);
 		operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
 		operationsAsync.setOnSucceeded(this::handleOperationsAsyncSuccess);
 		operationsAsync.setOnFailed(this::handleOperationsAsyncFail);
@@ -192,7 +196,7 @@ public class BonePresenter implements Initializable {
 		});
 	}
 
-	private void addEditorTab(String title, File file) {
+	private void addNewEditorTab(String title, File file) {
 		Tab owlsEditor = new Tab(title);
 		final EditorView editorView = new EditorView();
 		((EditorPresenter) editorView.getPresenter()).showFileContent(title, file);
@@ -218,10 +222,9 @@ public class BonePresenter implements Initializable {
 
 	private void handleOperationsAsyncSuccess(WorkerStateEvent event) {
 		List<WSDLOperation> fetchedOperations = operationsAsync.getValue();
-		fetchedOperations.forEach(this::putWSDLOperation);
+		clearWSDLOperation();
 		services.setItems(FXCollections.observableArrayList(fetchedOperations));
 		fetchedOperations.stream().findFirst().ifPresent(services::setValue);
-//		viewOWLS.setDisable(false);
 		handleServices();
 		LOG.log(Level.INFO,
 				() -> {
@@ -229,13 +232,14 @@ public class BonePresenter implements Initializable {
 							operationsAsync.getWsdlURL(),
 							" succeeded");
 				});
+		fetchedOperations.clear();
+		fetchedOperations = null;
 	}
 
 	@SuppressWarnings("ThrowableResultIgnored")
 	private void handleOperationsAsyncFail(WorkerStateEvent event) {
 		services.getItems().clear();
 		clearWSDLOperation();
-//		viewOWLS.setDisable(true);
 		LOG.warning(
 				() -> {
 					return "Fetcher Service task failed "
@@ -271,11 +275,10 @@ public class BonePresenter implements Initializable {
 			final OWLOntology ontology = OWLFactory.createKB().createOntology(URI.create(logicalURI.getText()));
 			OWLS.addOWLSImports(ontology);
 
-			final WSDLOperation operation = services.getSelectionModel().getSelectedItem();
 			final String name = serviceName.getText().trim();
 
 			final WSDLTranslator translator = new WSDLTranslator(ontology,
-					operation, name);
+					Objects.requireNonNull(services.getSelectionModel().getSelectedItem()), name);
 			translator.setServiceName(name);
 			translator.setTextDescription(description.getText().trim());
 
@@ -294,7 +297,7 @@ public class BonePresenter implements Initializable {
 						output.getXslt());
 			});
 			translator.writeOWLS(new FileOutputStream(file));
-			this.addEditorTab(name, file);
+			this.addNewEditorTab(name, file);
 
 		} catch (IOException ex) {
 			LOG.log(Level.SEVERE, ex.getMessage());
@@ -316,6 +319,7 @@ public class BonePresenter implements Initializable {
 	private void handleServices() {
 		SingleSelectionModel<WSDLOperation> currentOpeation
 				= services.selectionModelProperty().getValue();
+
 		if (currentOpeation.isEmpty()) {
 			serviceName.clear();
 			description.clear();
@@ -323,11 +327,16 @@ public class BonePresenter implements Initializable {
 			outputs.getItems().clear();
 
 		} else {
-			final WSDLOperation operation = currentOpeation.getSelectedItem();
+			WSDLOperation operation = currentOpeation.getSelectedItem();
 			serviceName.setText(Objects.requireNonNull(operation.getName(),
 					"Default name"));
 			description.setText(Objects.requireNonNull(operation.getDescription(),
 					"Default description"));
+
+			if (!currentInputsMap.containsKey(operation)) {
+				putWSDLOperation(operation);
+			}
+
 			inputs.setItems(currentInputsMap.get(operation));
 			outputs.setItems(currentOutputsMap.get(operation));
 		}

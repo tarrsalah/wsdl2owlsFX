@@ -52,6 +52,11 @@ public class OperationsAsync extends Service<List<WSDLOperation>> {
 		return wsdlURL;
 	}
 
+	/**
+	 * TODO
+	 * Refactor this Task to return a Map <Operation, List<Supllier<Parameter>>>
+	 * @return ?
+	 */
 	@Override
 	protected Task<List<WSDLOperation>> createTask() {
 		return new Task<List<WSDLOperation>>() {

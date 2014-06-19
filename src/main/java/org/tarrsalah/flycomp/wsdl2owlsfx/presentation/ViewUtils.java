@@ -33,7 +33,7 @@ import javafx.scene.control.TableView;
  */
 public class ViewUtils {
 
-	// refreshTableView the modther fucker ! BUG 
+	// refreshTableView the mother fucker ! BUG 
 	static public void refreshTableView(TableView<?> table) {
 		table.getColumns().get(0).setVisible(false);
 		table.getColumns().get(0).setVisible(true);

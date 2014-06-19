@@ -55,7 +55,9 @@ public class Parameter {
 	public Parameter(WSDLParameter parameter) {
 		// set the names
 		this.initialParameter = parameter;
+
 		wsdlName.setValue(URIUtils.getLocalName(parameter.getName()));
+
 		owlsName.setValue(wsdlName.getValue());
 
 		// set the wsdlType

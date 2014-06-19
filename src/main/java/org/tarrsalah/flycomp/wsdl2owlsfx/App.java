@@ -23,11 +23,10 @@
  */
 package org.tarrsalah.flycomp.wsdl2owlsfx;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BonePresenter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BoneView;
 
 /**
@@ -39,15 +38,12 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BoneView;
  */
 public class App extends Application {
 
-	public static final ExecutorService executor = Executors.newSingleThreadExecutor();
-
 	@Override
 	public void start(Stage stage) throws Exception {
-
 		Scene scene = new Scene(new BoneView().getView());
 		stage.setScene(scene);
-		stage.setMinWidth(1000);
 		stage.setTitle("WSDL to OWLS converter");
+		stage.setMinWidth(1000);
 		stage.setWidth(1000);
 		stage.setHeight(1000);
 		stage.show();
@@ -55,12 +51,11 @@ public class App extends Application {
 
 	public static void main(String[] args) {
 		launch(args);
-
 	}
 
 	@Override
 	public void stop() throws Exception {
 		super.stop();
-		executor.shutdownNow();
+		BonePresenter.executor.shutdownNow();
 	}
 }
