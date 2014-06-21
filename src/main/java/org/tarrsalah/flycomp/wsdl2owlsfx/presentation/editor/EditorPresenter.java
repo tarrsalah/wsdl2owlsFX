@@ -42,30 +42,30 @@ import javafx.scene.control.TextArea;
  */
 public class EditorPresenter implements Initializable {
 
-	private static final Logger LOG = Logger.getLogger(EditorPresenter.class.getName());
+    private static final Logger LOG = Logger.getLogger(EditorPresenter.class.getName());
 
-	@FXML
-	private TextArea editor;
+    @FXML
+    private TextArea editor;
 
-	/**
-	 * Initializes the controller class.
-	 *
-	 * @param url
-	 * @param rb
-	 */
-	@Override
-	public void initialize(URL url, ResourceBundle rb) {
-		// TODO
-	}
+    /**
+     * Initializes the controller class.
+     *
+     * @param url
+     * @param rb
+     */
+    @Override
+    public void initialize(URL url, ResourceBundle rb) {
+        // TODO
+    }
 
-	// Not Thread safe
-	// Must be invoked from the javafx application thread
-	public void showFileContent(String title, File file) {
-		try {
-			Files.lines(file.toPath(), Charset.forName("UTF-8"))
-					.forEach(line -> editor.appendText(line + "\n"));
-		} catch (IOException ex) {
-			LOG.log(Level.SEVERE, ex.getMessage());
-		}
-	}
+    // Not Thread safe
+    // Must be invoked from the javafx application thread
+    public void showFileContent(String title, File file) {
+        try {
+            Files.lines(file.toPath(), Charset.forName("UTF-8"))
+                    .forEach(line -> editor.appendText(line + "\n"));
+        } catch (IOException ex) {
+            LOG.log(Level.SEVERE, ex.getMessage());
+        }
+    }
 }

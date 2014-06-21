@@ -37,7 +37,7 @@ import org.mindswap.wsdl.WSDLService;
  *
  * @author tarrsalah.org
  */
-public class OperationsAsync extends Service<List<Operation>> {
+public  class OperationsAsync extends Service<List<Operation>> {
 
     private final StringProperty wsdlURL = new SimpleStringProperty(this, "wsdlURL");
 

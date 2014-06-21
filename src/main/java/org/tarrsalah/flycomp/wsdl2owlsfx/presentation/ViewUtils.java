@@ -33,25 +33,25 @@ import javafx.scene.control.TableView;
  */
 public class ViewUtils {
 
-	// refreshTableView the mother fucker ! BUG 
-	static public void refreshTableView(TableView<?> table) {
-		table.getColumns().get(0).setVisible(false);
-		table.getColumns().get(0).setVisible(true);
+    // refreshTableView the mother fucker ! BUG 
+    static public void refreshTableView(TableView<?> table) {
+        table.getColumns().get(0).setVisible(false);
+        table.getColumns().get(0).setVisible(true);
 
-	}
+    }
 
-	static public void bindWorkerToProgressIndicator(Worker worker,
-			ProgressIndicator indicator) {
-		worker.runningProperty().addListener(
-				(o, oldV, newV) -> {
-					if (newV) {
-						indicator.setPrefHeight(20);
-						indicator.setPrefWidth(20);
-					} else {
-						indicator.setPrefHeight(0);
-						indicator.setPrefWidth(0);
-					}
-				}
-		);
-	}
+    static public void bindWorkerToProgressIndicator(Worker worker,
+            ProgressIndicator indicator) {
+        worker.runningProperty().addListener(
+                (o, oldV, newV) -> {
+                    if (newV) {
+                        indicator.setPrefHeight(20);
+                        indicator.setPrefWidth(20);
+                    } else {
+                        indicator.setPrefHeight(0);
+                        indicator.setPrefWidth(0);
+                    }
+                }
+        );
+    }
 }

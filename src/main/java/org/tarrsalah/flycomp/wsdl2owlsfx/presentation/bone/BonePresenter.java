@@ -24,9 +24,6 @@
 package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -65,11 +62,8 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javax.inject.Inject;
-import org.mindswap.owl.OWLFactory;
-import org.mindswap.owl.OWLOntology;
-import org.mindswap.owls.vocabulary.OWLS;
 import org.mindswap.wsdl.WSDLOperation;
-import org.mindswap.wsdl.WSDLTranslator;
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OWLSGeneratorAsync;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OperationsAsync;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Parameter;
@@ -85,7 +79,7 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorView;
 public class BonePresenter implements Initializable {
 
     private static final Logger LOG = Logger.getLogger(BonePresenter.class.getName());
-    public final static ExecutorService executor = Executors.newSingleThreadExecutor();
+    public final static ExecutorService executor = Executors.newCachedThreadPool();
 
     @FXML
     private TabPane tabPane;
@@ -134,9 +128,10 @@ public class BonePresenter implements Initializable {
 
     @FXML
     private ProgressIndicator progress;
-       
+
     @Inject
     private OperationsAsync operationsAsync;
+
     private final Map<WSDLOperation, Operation> operationsMap;
 
     public BonePresenter() {
@@ -174,9 +169,9 @@ public class BonePresenter implements Initializable {
 
         namespaceAbbr.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.25));
         namespaceURL.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.75));
-        
+
         remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
-        
+
         services.setConverter(new StringConverter<WSDLOperation>() {
             @Override
             public String toString(WSDLOperation operation) {
@@ -194,20 +189,6 @@ public class BonePresenter implements Initializable {
                         .get();
             }
         });
-    }
-
-    private void addNewEditorTab(String title, File file) {
-        Tab owlsEditor = new Tab(title);
-        final EditorView editorView = new EditorView();
-        ((EditorPresenter) editorView.getPresenter()).showFileContent(title, file);
-        final HBox box = (HBox) editorView.getView();
-        // dirty hack!
-        box.prefHeightProperty().bind(tabPane.heightProperty());
-        box.prefWidthProperty().bind(tabPane.widthProperty());
-        owlsEditor.setContent(box);
-
-        tabPane.getTabs().add(owlsEditor);
-        tabPane.getSelectionModel().select(owlsEditor); //select by object
     }
 
     private void handleOperationsAsyncSuccess(WorkerStateEvent event) {
@@ -266,40 +247,28 @@ public class BonePresenter implements Initializable {
 
     @FXML
     private void handleViewOwls() {
-        try {
-            File file = File.createTempFile("_" + String.valueOf(System.currentTimeMillis()), "owls");
-            file.deleteOnExit();
-
-            final OWLOntology ontology = OWLFactory.createKB().createOntology(URI.create(logicalURI.getText()));
-            OWLS.addOWLSImports(ontology);
-
-            final String name = serviceName.getText().trim();
-
-            final WSDLTranslator translator = new WSDLTranslator(ontology,
-                    Objects.requireNonNull(services.getSelectionModel().getSelectedItem()), name);
-            translator.setServiceName(name);
-            translator.setTextDescription(description.getText().trim());
-
-            // TODO: eliminate duplication -> move the lambda to the Parameter  class.
-            inputs.getItems().forEach(input -> {
-                translator.addInput(input.getInitialParameter(),
-                        input.getWsdlName(),
-                        URI.create("http://www.jiji.org"),
-                        input.getXslt());
-            });
-
-            outputs.getItems().forEach(output -> {
-                translator.addOutput(output.getInitialParameter(),
-                        output.getWsdlName(),
-                        URI.create("http://www.jiji.org"),
-                        output.getXslt());
-            });
-            translator.writeOWLS(new FileOutputStream(file));
-            this.addNewEditorTab(name, file);
-
-        } catch (IOException ex) {
-            LOG.log(Level.SEVERE, ex.getMessage());
-        }
+        final Operation operation = operationsMap.get(services.selectionModelProperty().getValue().getSelectedItem());
+        final OWLSGeneratorAsync generatorAsync = OWLSGeneratorAsync.builder()
+                .name(serviceName.getText().trim())
+                .description(description.getText().trim())
+                .logicalURL(logicalURI.getText().trim())
+                .operation(operation)
+                .executor(executor)
+                .build();
+        ViewUtils.bindWorkerToProgressIndicator(generatorAsync, progress);
+        generatorAsync.setOnSucceeded(event -> {
+            final String title = operation.getOperation().getName().concat(".owls");
+            final Tab owlsEditor = new Tab(title);
+            final EditorView editorView = new EditorView();
+            ((EditorPresenter) editorView.getPresenter()).showFileContent(title, generatorAsync.getValue());
+            final HBox box = (HBox) editorView.getView();
+            // dirty hack!
+            box.prefHeightProperty().bind(tabPane.heightProperty());
+            box.prefWidthProperty().bind(tabPane.widthProperty());
+            owlsEditor.setContent(box);
+            tabPane.getTabs().add(owlsEditor);
+        });
+        generatorAsync.start();
     }
 
     @FXML

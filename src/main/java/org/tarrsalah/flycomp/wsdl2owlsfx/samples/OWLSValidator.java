@@ -47,88 +47,88 @@ import org.mindswap.utils.OutputFormatter;
  */
 public class OWLSValidator {
 
-	boolean parseRDFFinished = false;
+    boolean parseRDFFinished = false;
 
-	List<String> serviceURIs = new ArrayList<String>();
-	List<String> errors = new ArrayList<String>();
-	List<String> warnings = new ArrayList<String>();
-	List<String> rdfProblems = new ArrayList<String>();
+    List<String> serviceURIs = new ArrayList<String>();
+    List<String> errors = new ArrayList<String>();
+    List<String> warnings = new ArrayList<String>();
+    List<String> rdfProblems = new ArrayList<String>();
 
-	public OWLSValidator() {
+    public OWLSValidator() {
 
-	}
+    }
 
-	public boolean validate(final String fileURI) throws Exception {
-		return validate(fileURI, new PrintWriter(System.out));
-	}
+    public boolean validate(final String fileURI) throws Exception {
+        return validate(fileURI, new PrintWriter(System.out));
+    }
 
-	public boolean validate(final String fileURI, final PrintWriter output) throws Exception {
-		return validate(fileURI, output, false);
-	}
+    public boolean validate(final String fileURI, final PrintWriter output) throws Exception {
+        return validate(fileURI, output, false);
+    }
 
-	public boolean validate(final String fileURI, final PrintWriter output, final boolean isHTML) throws Exception {
-		return validate(fileURI, new OutputFormatter(output, isHTML));
-	}
+    public boolean validate(final String fileURI, final PrintWriter output, final boolean isHTML) throws Exception {
+        return validate(fileURI, new OutputFormatter(output, isHTML));
+    }
 
-	public boolean validate(final String fileURI, final OutputFormatter out) throws Exception {
-		final URI uri = new URI(fileURI);
+    public boolean validate(final String fileURI, final OutputFormatter out) throws Exception {
+        final URI uri = new URI(fileURI);
 
-		final OWLKnowledgeBase kb = OWLFactory.createKB();
+        final OWLKnowledgeBase kb = OWLFactory.createKB();
 
-		final OWLOntology ont = kb.read(uri);
+        final OWLOntology ont = kb.read(uri);
 
-		final List<Service> services = new ArrayList<Service>();
+        final List<Service> services = new ArrayList<Service>();
 
-		out.printBold("Number of services found: ").println(ont.getServices(false).size());
-		out.printBold("Number of valid services: ").println(services.size());
-		out.println();
+        out.printBold("Number of services found: ").println(ont.getServices(false).size());
+        out.printBold("Number of valid services: ").println(services.size());
+        out.println();
 
-		printMesssages(out, "RDF Problems: ", rdfProblems.iterator());
-		printMesssages(out, "Errors: ", errors.iterator());
-		printMesssages(out, "Warnings: ", warnings.iterator());
+        printMesssages(out, "RDF Problems: ", rdfProblems.iterator());
+        printMesssages(out, "Errors: ", errors.iterator());
+        printMesssages(out, "Warnings: ", warnings.iterator());
 
-		for (Service service : services) {
-			out.printBold("Service: ").printLink(service.getURI().toString());
+        for (Service service : services) {
+            out.printBold("Service: ").printLink(service.getURI().toString());
 //			out.print(" (Version: ").print(service.getOWLSVersion()).print(")").println();
-			out.printBold("Name: ").println(service.getLabel(null));
-			out.printBold("Description: ").println(service.getProfile().getTextDescription());
-		}
+            out.printBold("Name: ").println(service.getLabel(null));
+            out.printBold("Description: ").println(service.getProfile().getTextDescription());
+        }
 
-		out.flush();
+        out.flush();
 
-		// FIXME return value for validation
-		// return services.size() > 0 && errors.isEmpty();
-		return true;
-	}
+        // FIXME return value for validation
+        // return services.size() > 0 && errors.isEmpty();
+        return true;
+    }
 
-	public void printMesssages(final OutputFormatter out, final String header, final Iterator<String> i) {
-		if (i.hasNext()) {
-			out.printBold(header).println();
+    public void printMesssages(final OutputFormatter out, final String header, final Iterator<String> i) {
+        if (i.hasNext()) {
+            out.printBold(header).println();
 
-			while (i.hasNext()) {
-				final String error = i.next();
+            while (i.hasNext()) {
+                final String error = i.next();
 
-				if (out.isFormatHTML()) {
-					out.print("<ul>");
-				}
-				if (out.isFormatHTML()) {
-					out.print("<li>");
-					out.print(format(error));
-					out.print("</li>");
-				} else {
-					out.println(error);
-				}
-				if (out.isFormatHTML()) {
-					out.print("</ul>");
-				}
-			}
+                if (out.isFormatHTML()) {
+                    out.print("<ul>");
+                }
+                if (out.isFormatHTML()) {
+                    out.print("<li>");
+                    out.print(format(error));
+                    out.print("</li>");
+                } else {
+                    out.println(error);
+                }
+                if (out.isFormatHTML()) {
+                    out.print("</ul>");
+                }
+            }
 
-			out.println();
-		}
-	}
+            out.println();
+        }
+    }
 
-	public String format(final String str) {
-		return str;
+    public String format(final String str) {
+        return str;
 //		return str.replaceAll("\n", "<br>").replaceAll(" ", "&nbsp;");
 //		StringBuffer buffer = new StringBuffer();
 //		String link;
@@ -148,68 +148,68 @@ public class OWLSValidator {
 //		}
 //		buffer.append(str.substring(start));
 //		return buffer.toString().replaceAll("\n", "<br>");
-	}
+    }
 
-	public String getServiceURI() {
-		return serviceURIs.get(serviceURIs.size() - 1);
-	}
+    public String getServiceURI() {
+        return serviceURIs.get(serviceURIs.size() - 1);
+    }
 
-	public void put(final Map<String, List<String>> table, final String key, final String value) {
-		List<String> list = table.get(key);
+    public void put(final Map<String, List<String>> table, final String key, final String value) {
+        List<String> list = table.get(key);
 
-		if (list == null) {
-			list = new ArrayList<String>();
-			table.put(key, list);
-		}
+        if (list == null) {
+            list = new ArrayList<String>();
+            table.put(key, list);
+        }
 
-		list.add(value);
-	}
+        list.add(value);
+    }
 
-	public void startService(final String serviceURI) {
-		serviceURIs.add(serviceURI);
-	}
+    public void startService(final String serviceURI) {
+        serviceURIs.add(serviceURI);
+    }
 
-	public void finishService(final String serviceURI) {
-	}
+    public void finishService(final String serviceURI) {
+    }
 
-	public void warning(final String msg) {
-		if (parseRDFFinished) {
-			warnings.add(msg);
-		} else {
-			rdfProblems.add(msg);
-		}
-	}
+    public void warning(final String msg) {
+        if (parseRDFFinished) {
+            warnings.add(msg);
+        } else {
+            rdfProblems.add(msg);
+        }
+    }
 
-	public void error(final String msg) {
-		if (parseRDFFinished) {
-			errors.add(msg);
-		} else {
-			rdfProblems.add(msg);
-		}
-	}
+    public void error(final String msg) {
+        if (parseRDFFinished) {
+            errors.add(msg);
+        } else {
+            rdfProblems.add(msg);
+        }
+    }
 
-	public void startParseRDF() {
-		parseRDFFinished = false;
-	}
+    public void startParseRDF() {
+        parseRDFFinished = false;
+    }
 
-	public void finishParseRDF() {
-		parseRDFFinished = true;
-	}
+    public void finishParseRDF() {
+        parseRDFFinished = true;
+    }
 
-	public static void main(final String[] args) throws Exception {
-		if (args.length != 1) {
-			if (args.length < 1) {
-				System.err.println("Not enough parameters");
-			}
-			if (args.length > 1) {
-				System.err.println("Too many parameters");
-			}
-			System.err.println("usage: java OWLSValidator <serviceURI>");
-			System.exit(0);
-		}
+    public static void main(final String[] args) throws Exception {
+        if (args.length != 1) {
+            if (args.length < 1) {
+                System.err.println("Not enough parameters");
+            }
+            if (args.length > 1) {
+                System.err.println("Too many parameters");
+            }
+            System.err.println("usage: java OWLSValidator <serviceURI>");
+            System.exit(0);
+        }
 
-		final OWLSValidator validator = new OWLSValidator();
-		System.out.println("Valid: " + validator.validate(args[0]));
-	}
+        final OWLSValidator validator = new OWLSValidator();
+        System.out.println("Valid: " + validator.validate(args[0]));
+    }
 
 }

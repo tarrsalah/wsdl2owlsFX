@@ -29,8 +29,8 @@ import org.mindswap.wsdl.WSDLOperation;
 
 /**
  * Operation.java (UTF-8) Jun 19, 2014
-
- Operation represent a (JavaFx) observable WSDL operation
+ *
+ * Operation represent a (JavaFx) observable WSDL operation
  *
  * @author tarrsalah.org
  */
