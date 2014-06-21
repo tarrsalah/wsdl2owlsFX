@@ -25,6 +25,7 @@ package org.tarrsalah.flycomp.wsdl2owlsfx;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BonePresenter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BoneView;
@@ -38,24 +39,36 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BoneView;
  */
 public class App extends Application {
 
-	@Override
-	public void start(Stage stage) throws Exception {
-		Scene scene = new Scene(new BoneView().getView());
-		stage.setScene(scene);
-		stage.setTitle("WSDL to OWLS converter");
-		stage.setMinWidth(1000);
-		stage.setWidth(1000);
-		stage.setHeight(1000);
-		stage.show();
-	}
+    @Override
+    public void start(Stage stage) throws Exception {
+        Scene scene = new Scene(new BoneView().getView());
+        stage.setScene(scene);
+        stage.setTitle("WSDL to OWLS converter");
+        stage.setMinWidth(1000);
+        stage.setWidth(1000);
+        stage.setHeight(1000);
+        stage.getIcons().setAll(
+                new Image(getResourceLoc("icons/flower-seed-icon-16.png")),
+                new Image(getResourceLoc("icons/flower-seed-icon-32.png")),
+                new Image(getResourceLoc("icons/flower-seed-icon-64.png")),
+                new Image(getResourceLoc("icons/flower-seed-icon-128.png")),
+                new Image(getResourceLoc("icons/flower-seed-icon-256.png")),
+                new Image(getResourceLoc("icons/flower-seed-icon-512.png"))
+        );
+        stage.show();
+    }
 
-	public static void main(String[] args) {
-		launch(args);
-	}
+    public static void main(String[] args) {
+        launch(args);
+    }
 
-	@Override
-	public void stop() throws Exception {
-		super.stop();
-		BonePresenter.executor.shutdownNow();
-	}
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        BonePresenter.executor.shutdownNow();
+    }
+
+    private String getResourceLoc(String name) {
+        return getClass().getClassLoader().getResource(name).toExternalForm();
+    }
 }

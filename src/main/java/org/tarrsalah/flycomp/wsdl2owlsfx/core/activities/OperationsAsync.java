@@ -21,14 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.tarrsalah.flycomp.wsdl2owlsfx.business.boundary;
+package org.tarrsalah.flycomp.wsdl2owlsfx.core.activities;
 
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
 import java.util.List;
+import java.util.stream.Collectors;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import org.mindswap.wsdl.WSDLOperation;
 import org.mindswap.wsdl.WSDLService;
 
 /**
@@ -36,34 +37,32 @@ import org.mindswap.wsdl.WSDLService;
  *
  * @author tarrsalah.org
  */
-public class OperationsAsync extends Service<List<WSDLOperation>> {
+public class OperationsAsync extends Service<List<Operation>> {
 
-	private final StringProperty wsdlURL = new SimpleStringProperty(this, "wsdlURL");
+    private final StringProperty wsdlURL = new SimpleStringProperty(this, "wsdlURL");
 
-	public String getWsdlURL() {
-		return wsdlURL.getValue();
-	}
+    public String getWsdlURL() {
+        return wsdlURL.getValue();
+    }
 
-	public void setWsdlURL(String wsdlURL) {
-		this.wsdlURL.setValue(wsdlURL);
-	}
+    public void setWsdlURL(String wsdlURL) {
+        this.wsdlURL.setValue(wsdlURL);
+    }
 
-	public StringProperty wsdlURLProperty() {
-		return wsdlURL;
-	}
+    public StringProperty wsdlURLProperty() {
+        return wsdlURL;
+    }
 
-	/**
-	 * TODO
-	 * Refactor this Task to return a Map <Operation, List<Supllier<Parameter>>>
-	 * @return ?
-	 */
-	@Override
-	protected Task<List<WSDLOperation>> createTask() {
-		return new Task<List<WSDLOperation>>() {
-			@Override
-			protected List<WSDLOperation> call() throws Exception {
-				return WSDLService.createService(wsdlURL.getValue()).getOperations();
-			}
-		};
-	}
+    @Override
+    protected Task<List<Operation>> createTask() {
+        return new Task<List<Operation>>() {
+            @Override
+            protected List<Operation> call() throws Exception {
+                return WSDLService.createService(wsdlURL.getValue()).getOperations()
+                        .stream()
+                        .map(Operation::get)
+                        .collect(Collectors.toList());
+            }
+        };
+    }
 }

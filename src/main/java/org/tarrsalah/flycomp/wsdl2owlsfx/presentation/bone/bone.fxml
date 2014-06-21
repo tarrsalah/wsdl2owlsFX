@@ -276,8 +276,8 @@ THE SOFTWARE.
 														</TableView>
 														<VBox alignment="TOP_RIGHT" spacing="10.0">
 															<children>
-																<Button minWidth="80.0" mnemonicParsing="false" text="Add" />
-																<Button minWidth="80.0" mnemonicParsing="false" text="Remove" />
+																<Button fx:id="add" minWidth="80.0" defaultButton="true"  mnemonicParsing="false" text="Add" />
+																<Button fx:id="remove" minWidth="80.0" mnemonicParsing="false" text="Remove" />
 															</children>
 														</VBox>
 													</children>

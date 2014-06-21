@@ -10,6 +10,7 @@
 			<goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
 			
 			
+			
 		</goals>
 		<properties>
 			<exec.args>-Xmx100m -Xms100m -classpath %classpath ${packageClassName}</exec.args>
@@ -53,6 +54,7 @@
 		<goals>
 			<goal>clean</goal>
 			<goal>install</goal>
+			<goal>assembly:single</goal>			
                 
 		</goals>
 	</action>

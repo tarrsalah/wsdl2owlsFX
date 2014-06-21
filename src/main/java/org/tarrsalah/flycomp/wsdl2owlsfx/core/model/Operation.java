@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License
  *
  * Copyright 2014 tarrsalah.org.
@@ -21,37 +21,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.tarrsalah.flycomp.wsdl2owlsfx.business.model;
+package org.tarrsalah.flycomp.wsdl2owlsfx.core.model;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import javafx.collections.FXCollections;
+import java.util.Objects;
 import javafx.collections.ObservableList;
 import org.mindswap.wsdl.WSDLOperation;
-import org.mindswap.wsdl.WSDLParameter;
 
 /**
- * ParamFactory.java (UTF-8)
- *
- * Jun 11, 2014
+ * Operation.java (UTF-8) Jun 19, 2014
+
+ Operation represent a (JavaFx) observable WSDL operation
  *
  * @author tarrsalah.org
  */
-public class ParamFactory {
+public class Operation {
 
-	public static ObservableList<Parameter> getInputParams(WSDLOperation operation) {
-		return getParams(operation.getInputs());
-	}
+    private final WSDLOperation operation;
+    private ObservableList<Parameter> inputs;
+    private ObservableList<Parameter> outputs;
 
-	public static ObservableList<Parameter> getOutputParams(WSDLOperation operation) {
-		return getParams(operation.getOutputs());
-	}
+    private Operation(WSDLOperation operation) {
+        this.operation = operation;
+    }
 
-	private static ObservableList<Parameter> getParams(List<WSDLParameter> parameters) {
-		return FXCollections.observableArrayList(parameters
-				.stream()
-				.parallel()
-				.map(Parameter::new)
-				.collect(Collectors.toList()));
-	}
+    public static Operation get(WSDLOperation operation) {
+        return new Operation(operation);
+    }
+
+    public WSDLOperation getOperation() {
+        return operation;
+    }
+
+    public synchronized ObservableList<Parameter> getInputs() {
+        if (Objects.isNull(inputs)) {
+            inputs = Parameter.getInputParams(operation);
+        }
+        return inputs;
+    }
+
+    public synchronized ObservableList<Parameter> getOutputs() {
+        if (Objects.isNull(outputs)) {
+            outputs = Parameter.getOutputParams(operation);
+        }
+        return outputs;
+    }
 }

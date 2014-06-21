@@ -28,19 +28,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
-import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -69,9 +70,9 @@ import org.mindswap.owl.OWLOntology;
 import org.mindswap.owls.vocabulary.OWLS;
 import org.mindswap.wsdl.WSDLOperation;
 import org.mindswap.wsdl.WSDLTranslator;
-import org.tarrsalah.flycomp.wsdl2owlsfx.business.boundary.OperationsAsync;
-import org.tarrsalah.flycomp.wsdl2owlsfx.business.model.ParamFactory;
-import org.tarrsalah.flycomp.wsdl2owlsfx.business.model.Parameter;
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OperationsAsync;
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Parameter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.ViewUtils;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorPresenter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorView;
@@ -83,263 +84,256 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorView;
  */
 public class BonePresenter implements Initializable {
 
-	private static final Logger LOG = Logger.getLogger(BonePresenter.class.getName());
-	public final static ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static final Logger LOG = Logger.getLogger(BonePresenter.class.getName());
+    public final static ExecutorService executor = Executors.newSingleThreadExecutor();
 
-	@FXML
-	private TabPane tabPane;
+    @FXML
+    private TabPane tabPane;
 
-	@FXML
-	private Tab generatorTab;
+    @FXML
+    private Tab generatorTab;
 
-	@FXML
-	private MenuItem importWsdl, exit;
+    @FXML
+    private MenuItem importWsdl, exit;
 
-	@FXML
-	private TextField wsdlURL;
+    @FXML
+    private TextField wsdlURL;
 
-	@FXML
-	private Button viewOWLS;
+    @FXML
+    private Button viewOWLS;
 
-	@FXML
-	private TextField serviceName;
+    @FXML
+    private TextField serviceName;
 
-	@FXML
-	private TextArea description;
+    @FXML
+    private TextArea description;
 
-	@FXML
-	private TextField logicalURI;
+    @FXML
+    private TextField logicalURI;
 
-	@FXML
-	private ComboBox<WSDLOperation> services;
+    @FXML
+    private ComboBox<WSDLOperation> services;
 
-	@FXML
-	private TableView<Parameter> inputs;
+    @FXML
+    private TableView<Parameter> inputs;
 
-	@FXML
-	private TableView<Parameter> outputs;
+    @FXML
+    private TableView<Parameter> outputs;
 
-	@FXML
-	private TableView namespaces;
+    @FXML
+    private TableView namespaces;
 
-	@FXML
-	private TableColumn namespaceAbbr;
+    @FXML
+    private TableColumn namespaceAbbr;
 
-	@FXML
-	private TableColumn namespaceURL;
+    @FXML
+    private TableColumn namespaceURL;
 
-	@FXML
-	private ProgressIndicator progress;
+    @FXML
+    private Button remove;
 
-	// TODO: FIXME
-	// There is a duplication here !
-	// should be replacebale by on map pf object.field -> object
-	private final Map<WSDLOperation, ObservableList<Parameter>> currentInputsMap;
-	private final Map<WSDLOperation, ObservableList<Parameter>> currentOutputsMap;
+    @FXML
+    private ProgressIndicator progress;
+       
+    @Inject
+    private OperationsAsync operationsAsync;
+    private final Map<WSDLOperation, Operation> operationsMap;
 
-	@Inject
-	private OperationsAsync operationsAsync;
+    public BonePresenter() {
+        this.operationsMap = new HashMap<>();
+    }
 
-	public BonePresenter() {
-		currentInputsMap = new WeakHashMap<>();
-		currentOutputsMap = new WeakHashMap<>();
+    /**
+     * Initializes the controller class.
+     *
+     * @param url
+     * @param rb
+     */
+    @Override
+    public void initialize(URL url, ResourceBundle rb) {
 
-	}
+        generatorTab.setClosable(false);
+        importWsdl.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCodeCombination.CONTROL_DOWN));
+        exit.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCodeCombination.CONTROL_DOWN));
+        viewOWLS.disableProperty().bind(services.valueProperty().isNull());
+        services.disableProperty().bind(services.valueProperty().isNull());
 
-	/**
-	 * Initializes the controller class.
-	 *
-	 * @param url
-	 * @param rb
-	 */
-	@Override
-	public void initialize(URL url, ResourceBundle rb) {
+        operationsAsync.setExecutor(executor);
+        operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
+        operationsAsync.setOnSucceeded(this::handleOperationsAsyncSuccess);
+        operationsAsync.setOnFailed(this::handleOperationsAsyncFail);
+        ViewUtils.bindWorkerToProgressIndicator(operationsAsync, progress);
 
-		generatorTab.setClosable(false);
-		importWsdl.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCodeCombination.CONTROL_DOWN));
-		exit.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCodeCombination.CONTROL_DOWN));
-		viewOWLS.disableProperty().bind(services.valueProperty().isNull());
+        Stream.of(inputs, outputs).forEach(
+                tableView -> {
+                    tableView.getColumns().forEach((TableColumn c) -> {
+                        c.setCellFactory(TextFieldTableCell.<Parameter>forTableColumn());
+                    });
+                }
+        );
 
-		operationsAsync.setExecutor(executor);
-		operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
-		operationsAsync.setOnSucceeded(this::handleOperationsAsyncSuccess);
-		operationsAsync.setOnFailed(this::handleOperationsAsyncFail);
-		ViewUtils.bindWorkerToProgressIndicator(operationsAsync, progress);
+        namespaceAbbr.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.25));
+        namespaceURL.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.75));
+        
+        remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
+        
+        services.setConverter(new StringConverter<WSDLOperation>() {
+            @Override
+            public String toString(WSDLOperation operation) {
+                return operation.getName();
+            }
 
-		Stream.of(inputs, outputs).forEach(
-				tableView -> {
-					tableView.getColumns().forEach((TableColumn c) -> {
-						c.setCellFactory(TextFieldTableCell.<Parameter>forTableColumn());
-					});
-				}
-		);
+            @Override
+            public WSDLOperation fromString(String name) {
+                return services.getItems().stream()
+                        .filter(service
+                                -> (service.getName() == null
+                                ? name == null
+                                : service.getName().equals(name)))
+                        .findFirst()
+                        .get();
+            }
+        });
+    }
 
-		namespaceAbbr.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.25));
-		namespaceURL.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.75));
+    private void addNewEditorTab(String title, File file) {
+        Tab owlsEditor = new Tab(title);
+        final EditorView editorView = new EditorView();
+        ((EditorPresenter) editorView.getPresenter()).showFileContent(title, file);
+        final HBox box = (HBox) editorView.getView();
+        // dirty hack!
+        box.prefHeightProperty().bind(tabPane.heightProperty());
+        box.prefWidthProperty().bind(tabPane.widthProperty());
+        owlsEditor.setContent(box);
 
-		services.setConverter(new StringConverter<WSDLOperation>() {
-			@Override
-			public String toString(WSDLOperation operation) {
-				return operation.getName();
-			}
+        tabPane.getTabs().add(owlsEditor);
+        tabPane.getSelectionModel().select(owlsEditor); //select by object
+    }
 
-			@Override
-			public WSDLOperation fromString(String name) {
-				return services.getItems().stream()
-						.filter(service
-								-> (service.getName() == null
-								? name == null
-								: service.getName().equals(name)))
-						.findFirst()
-						.get();
-			}
-		});
-	}
+    private void handleOperationsAsyncSuccess(WorkerStateEvent event) {
+        operationsMap.clear();
+        operationsAsync.getValue()
+                .parallelStream()
+                .forEach(operation -> {
+                    operationsMap.put(operation.getOperation(), operation);
+                });
 
-	private void addNewEditorTab(String title, File file) {
-		Tab owlsEditor = new Tab(title);
-		final EditorView editorView = new EditorView();
-		((EditorPresenter) editorView.getPresenter()).showFileContent(title, file);
-		final HBox box = (HBox) editorView.getView();
-		// dirty hack!
-		box.prefHeightProperty().bind(tabPane.heightProperty());
-		box.prefWidthProperty().bind(tabPane.widthProperty());
-		owlsEditor.setContent(box);
+        final List<WSDLOperation> operations = operationsMap
+                .keySet()
+                .parallelStream()
+                .collect(Collectors.toList());
 
-		tabPane.getTabs().add(owlsEditor);
-		tabPane.getSelectionModel().select(owlsEditor); //select by object
-	}
+        services.setItems(FXCollections.observableArrayList(operations));
+        operations.stream().findFirst().ifPresent(services::setValue);
+        handleServices();
+        LOG.log(Level.INFO,
+                () -> {
+                    return String.join(" ", "Fetching from",
+                            operationsAsync.getWsdlURL(),
+                            " succeeded");
+                });
+    }
 
-	private synchronized void putWSDLOperation(WSDLOperation operation) {
-		currentInputsMap.put(operation, ParamFactory.getInputParams(operation));
-		currentOutputsMap.put(operation, ParamFactory.getOutputParams(operation));
-	}
+    @SuppressWarnings("ThrowableResultIgnored")
+    private void handleOperationsAsyncFail(WorkerStateEvent event) {
+        services.getItems().clear();
+        operationsMap.clear();
+        LOG.warning(
+                () -> {
+                    return "Fetcher Service task failed "
+                    + operationsAsync.getException().getMessage();
 
-	private synchronized void clearWSDLOperation() {
-		currentInputsMap.clear();
-		currentOutputsMap.clear();
-	}
+                });
+    }
 
-	private void handleOperationsAsyncSuccess(WorkerStateEvent event) {
-		List<WSDLOperation> fetchedOperations = operationsAsync.getValue();
-		clearWSDLOperation();
-		services.setItems(FXCollections.observableArrayList(fetchedOperations));
-		fetchedOperations.stream().findFirst().ifPresent(services::setValue);
-		handleServices();
-		LOG.log(Level.INFO,
-				() -> {
-					return String.join(" ", "Fetching from",
-							operationsAsync.getWsdlURL(),
-							" succeeded");
-				});
-		fetchedOperations.clear();
-		fetchedOperations = null;
-	}
+    @FXML
+    private void handleClose() {
+        Platform.exit();
+    }
 
-	@SuppressWarnings("ThrowableResultIgnored")
-	private void handleOperationsAsyncFail(WorkerStateEvent event) {
-		services.getItems().clear();
-		clearWSDLOperation();
-		LOG.warning(
-				() -> {
-					return "Fetcher Service task failed "
-					+ operationsAsync.getException().getMessage();
+    @FXML
+    private void handleImportWsdl() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose a WSDL file");
+        fileChooser.getExtensionFilters().addAll(new ExtensionFilter("WSDL Files", "*.wsdl"));
+        File selectedFile = fileChooser.showOpenDialog(
+                (Stage) generatorTab.getTabPane().getParent().getScene().getWindow());
+        if (Objects.nonNull(selectedFile)) {
+            wsdlURL.setText(selectedFile.toURI().toString());
+            handleWsdlUrl();
+        }
+    }
 
-				});
-	}
+    @FXML
+    private void handleViewOwls() {
+        try {
+            File file = File.createTempFile("_" + String.valueOf(System.currentTimeMillis()), "owls");
+            file.deleteOnExit();
 
-	@FXML
-	private void handleClose() {
-		Platform.exit();
-	}
+            final OWLOntology ontology = OWLFactory.createKB().createOntology(URI.create(logicalURI.getText()));
+            OWLS.addOWLSImports(ontology);
 
-	@FXML
-	private void handleImportWsdl() {
-		FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Choose a WSDL file");
-		fileChooser.getExtensionFilters().addAll(new ExtensionFilter("WSDL Files", "*.wsdl"));
-		File selectedFile = fileChooser.showOpenDialog(
-				(Stage) generatorTab.getTabPane().getParent().getScene().getWindow());
-		if (Objects.nonNull(selectedFile)) {
-			wsdlURL.setText(selectedFile.toURI().toString());
-			handleWsdlUrl();
-		}
-	}
+            final String name = serviceName.getText().trim();
 
-	@FXML
-	private void handleViewOwls() {
-		try {
-			File file = File.createTempFile("_" + String.valueOf(System.currentTimeMillis()), "owls");
-			file.deleteOnExit();
+            final WSDLTranslator translator = new WSDLTranslator(ontology,
+                    Objects.requireNonNull(services.getSelectionModel().getSelectedItem()), name);
+            translator.setServiceName(name);
+            translator.setTextDescription(description.getText().trim());
 
-			final OWLOntology ontology = OWLFactory.createKB().createOntology(URI.create(logicalURI.getText()));
-			OWLS.addOWLSImports(ontology);
+            // TODO: eliminate duplication -> move the lambda to the Parameter  class.
+            inputs.getItems().forEach(input -> {
+                translator.addInput(input.getInitialParameter(),
+                        input.getWsdlName(),
+                        URI.create("http://www.jiji.org"),
+                        input.getXslt());
+            });
 
-			final String name = serviceName.getText().trim();
+            outputs.getItems().forEach(output -> {
+                translator.addOutput(output.getInitialParameter(),
+                        output.getWsdlName(),
+                        URI.create("http://www.jiji.org"),
+                        output.getXslt());
+            });
+            translator.writeOWLS(new FileOutputStream(file));
+            this.addNewEditorTab(name, file);
 
-			final WSDLTranslator translator = new WSDLTranslator(ontology,
-					Objects.requireNonNull(services.getSelectionModel().getSelectedItem()), name);
-			translator.setServiceName(name);
-			translator.setTextDescription(description.getText().trim());
+        } catch (IOException ex) {
+            LOG.log(Level.SEVERE, ex.getMessage());
+        }
+    }
 
-			// TODO: eliminate duplication -> move the lambda to the Parameter  class.
-			inputs.getItems().forEach(input -> {
-				translator.addInput(input.getInitialParameter(),
-						input.getWsdlName(),
-						URI.create("http://www.jiji.org"),
-						input.getXslt());
-			});
+    @FXML
+    private void handleWsdlUrl() {
+        switch (operationsAsync.getState()) {
+            case READY:
+                operationsAsync.start();
+                break;
+            default:
+                operationsAsync.restart();
+        }
+    }
 
-			outputs.getItems().forEach(output -> {
-				translator.addOutput(output.getInitialParameter(),
-						output.getWsdlName(),
-						URI.create("http://www.jiji.org"),
-						output.getXslt());
-			});
-			translator.writeOWLS(new FileOutputStream(file));
-			this.addNewEditorTab(name, file);
+    @FXML
+    private void handleServices() {
+        final SingleSelectionModel<WSDLOperation> currentOpeation
+                = services.selectionModelProperty().getValue();
 
-		} catch (IOException ex) {
-			LOG.log(Level.SEVERE, ex.getMessage());
-		}
-	}
+        if (currentOpeation.isEmpty()) {
+            serviceName.clear();
+            description.clear();
+            inputs.getItems().clear();
+            outputs.getItems().clear();
 
-	@FXML
-	private void handleWsdlUrl() {
-		switch (operationsAsync.getState()) {
-			case READY:
-				operationsAsync.start();
-				break;
-			default:
-				operationsAsync.restart();
-		}
-	}
+        } else {
+            WSDLOperation operation = currentOpeation.getSelectedItem();
+            serviceName.setText(Objects.requireNonNull(operation.getName(),
+                    "Default name"));
+            description.setText(Objects.requireNonNull(operation.getDescription(),
+                    "Default description"));
 
-	@FXML
-	private void handleServices() {
-		SingleSelectionModel<WSDLOperation> currentOpeation
-				= services.selectionModelProperty().getValue();
-
-		if (currentOpeation.isEmpty()) {
-			serviceName.clear();
-			description.clear();
-			inputs.getItems().clear();
-			outputs.getItems().clear();
-
-		} else {
-			WSDLOperation operation = currentOpeation.getSelectedItem();
-			serviceName.setText(Objects.requireNonNull(operation.getName(),
-					"Default name"));
-			description.setText(Objects.requireNonNull(operation.getDescription(),
-					"Default description"));
-
-			if (!currentInputsMap.containsKey(operation)) {
-				putWSDLOperation(operation);
-			}
-
-			inputs.setItems(currentInputsMap.get(operation));
-			outputs.setItems(currentOutputsMap.get(operation));
-		}
-		Stream.of(inputs, outputs).forEach(ViewUtils::refreshTableView);
-	}
+            inputs.itemsProperty().bind(new SimpleObjectProperty<>(operationsMap.get(operation).getInputs()));
+            outputs.itemsProperty().bind(new SimpleObjectProperty<>(operationsMap.get(operation).getOutputs()));
+        }
+        Stream.of(inputs, outputs).forEach(ViewUtils::refreshTableView);
+    }
 }
