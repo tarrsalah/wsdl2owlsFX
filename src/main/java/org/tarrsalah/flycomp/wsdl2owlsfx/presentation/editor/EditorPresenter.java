@@ -25,15 +25,19 @@ package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.TextArea;
+import javafx.scene.web.WebView;
 
 /**
  * FXML Controller class
@@ -45,7 +49,24 @@ public class EditorPresenter implements Initializable {
     private static final Logger LOG = Logger.getLogger(EditorPresenter.class.getName());
 
     @FXML
-    private TextArea editor;
+    private WebView editor;
+
+    private final String template
+            = "<!doctype html>"
+            + "<html>"
+            + "<head>"
+            + "<script>"
+            + "${pretty}"
+            + "</script>"
+            + "</head>"
+            + "<body>"
+            + "<pre class=\"prettyprint linenums\">"
+            + "<code>"
+            + "${content}"
+            + "</code>"
+            + "</pre>"
+            + "</body>"
+            + "</html>";
 
     /**
      * Initializes the controller class.
@@ -62,10 +83,25 @@ public class EditorPresenter implements Initializable {
     // Must be invoked from the javafx application thread
     public void showFileContent(String title, File file) {
         try {
-            Files.lines(file.toPath(), Charset.forName("UTF-8"))
-                    .forEach(line -> editor.appendText(line + "\n"));
+            Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
+                    .reduce((line1, line2) -> line1 + "\n" + line2);
+            owls.ifPresent(reduce -> editor.getEngine().loadContent(templete(reduce)));
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, ex.getMessage());
         }
+    }
+
+    private String templete(String owls) {
+        try {
+            return template.replace("${content}", owls.replace("<", "&lt;")
+                    .replace(">", "&gt;"))
+                    .replace("${pretty}",
+                            Files.lines(Paths.get(URI.create("file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/js/run_prettify.js")
+                                    ))
+                            .reduce((line1, line2) -> line1 + "\n" + line2).orElse(""));
+        } catch (IOException ex) {
+            Logger.getLogger(EditorPresenter.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
 }
