@@ -26,7 +26,6 @@ package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -39,14 +38,11 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.web.WebView;
 
-/**
- * FXML Controller class
- *
- * @author tarrsalah.org
- */
 public class EditorPresenter implements Initializable {
 
     private static final Logger LOG = Logger.getLogger(EditorPresenter.class.getName());
+    private final String JS_FILE = "file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/prettify.js";
+    private final String CSS_FILE = "file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/prettify.css";
 
     @FXML
     private WebView editor;
@@ -55,12 +51,15 @@ public class EditorPresenter implements Initializable {
             = "<!doctype html>"
             + "<html>"
             + "<head>"
+            + "<style>"
+            + "${css}"
+            + "</style>"
             + "<script>"
-            + "${pretty}"
+            + "${js}"
             + "</script>"
             + "</head>"
-            + "<body>"
-            + "<pre class=\"prettyprint linenums\">"
+            + "<body onload=\"prettyPrint()\">"
+            + "<pre class=\"prettyprint lang-xml\">"
             + "<code>"
             + "${content}"
             + "</code>"
@@ -85,18 +84,22 @@ public class EditorPresenter implements Initializable {
         try {
             Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
                     .reduce((line1, line2) -> line1 + "\n" + line2);
-            owls.ifPresent(reduce -> editor.getEngine().loadContent(templete(reduce)));
+            owls.ifPresent(html -> editor.getEngine().loadContent(parse(html)));
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, ex.getMessage());
         }
     }
 
-    private String templete(String owls) {
+    private String parse(String owls) {
         try {
             return template.replace("${content}", owls.replace("<", "&lt;")
                     .replace(">", "&gt;"))
-                    .replace("${pretty}",
-                            Files.lines(Paths.get(URI.create("file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/js/run_prettify.js")
+                    .replace("${js}",
+                            Files.lines(Paths.get(URI.create(JS_FILE)
+                                    ))
+                            .reduce((line1, line2) -> line1 + "\n" + line2).orElse(""))
+                    .replace("${css}",
+                            Files.lines(Paths.get(URI.create(CSS_FILE)
                                     ))
                             .reduce((line1, line2) -> line1 + "\n" + line2).orElse(""));
         } catch (IOException ex) {
