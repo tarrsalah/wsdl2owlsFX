@@ -13,7 +13,7 @@
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS ROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -30,6 +30,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,7 +51,7 @@ public class EditorPresenter implements Initializable {
             = "<!doctype html>"
             + "<html>"
             + "<head>"
-            + "<stylte>"
+            + "<style>"
             + "${css}"
             + "</style>"
             + "<script>"
@@ -77,20 +78,21 @@ public class EditorPresenter implements Initializable {
         // TODO
     }
 
-    // Not Thread safe    
+    // Not Thread safe
+    // Must be invoked from the javafx application thread
     public void showFileContent(String title, File file) {
         try {
-            Files.lines(file.toPath(), Charset.forName("UTF-8"))
-                    .reduce((line1, line2) -> line1 + "\n" + line2)
-                    .ifPresent(html -> editor.getEngine().loadContent(parse(template, html)));
-        } catch (IOException exception) {
-            LOG.log(Level.SEVERE, exception.getMessage());
+            Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
+                    .reduce((line1, line2) -> line1 + "\n" + line2);
+            owls.ifPresent(html -> editor.getEngine().loadContent(parse(html)));
+        } catch (IOException ex) {
+            LOG.log(Level.SEVERE, ex.getMessage());
         }
     }
 
-    private String parse(String template, String content) {
+    private String parse(String owls) {
         try {
-            return template.replace("${content}", content.replace("<", "&lt;")
+            return template.replace("${content}", owls.replace("<", "&lt;")
                     .replace(">", "&gt;"))
                     .replace("${js}",
                             Files.lines(Paths.get(URI.create(JS_FILE)
@@ -100,9 +102,9 @@ public class EditorPresenter implements Initializable {
                             Files.lines(Paths.get(URI.create(CSS_FILE)
                                     ))
                             .reduce((line1, line2) -> line1 + "\n" + line2).orElse(""));
-        } catch (IOException exception) {
-            LOG.log(Level.SEVERE,exception.getMessage());
+        } catch (IOException ex) {
+            Logger.getLogger(EditorPresenter.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return content;
+        return null;
     }
 }
