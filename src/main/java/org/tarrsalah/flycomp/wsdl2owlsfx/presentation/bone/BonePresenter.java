@@ -1,4 +1,4 @@
-/* 
+/*  
  * The MIT License
  *
  * Copyright 2014 tarrsalah.org.
@@ -42,8 +42,6 @@ import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Side;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
@@ -56,8 +54,6 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -128,10 +124,12 @@ public class BonePresenter implements Initializable {
     @Inject
     private OperationsAsync operationsAsync;
 
-    private final Map<WSDLOperation, Operation> operationsMap;
+    private final Map<WSDLOperation, Operation> currentOperationsMap;
+    private final Map<Tab, EditorPresenter> openedTabs;
 
     public BonePresenter() {
-        this.operationsMap = new HashMap<>();
+        this.currentOperationsMap = new HashMap<>();
+        this.openedTabs = new HashMap<>();
     }
 
     /**
@@ -142,15 +140,10 @@ public class BonePresenter implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-
-        generatorTab.setClosable(false);        
-        importWsdl.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCodeCombination.CONTROL_DOWN));
-        exit.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCodeCombination.CONTROL_DOWN));
         viewOWLS.disableProperty().bind(services.valueProperty().isNull());
         services.disableProperty().bind(services.valueProperty().isNull());
-        
         saveOwlsFile.disableProperty().bind(generatorTab.selectedProperty());
-
+        remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
         operationsAsync.setExecutor(executor);
         operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
         operationsAsync.setOnSucceeded(this::handleOperationsAsyncSuccess);
@@ -167,8 +160,6 @@ public class BonePresenter implements Initializable {
 
         namespaceAbbr.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.25));
         namespaceURL.prefWidthProperty().bind(namespaces.widthProperty().multiply(0.75));
-
-        remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
 
         services.setConverter(new StringConverter<WSDLOperation>() {
             @Override
@@ -190,14 +181,14 @@ public class BonePresenter implements Initializable {
     }
 
     private void handleOperationsAsyncSuccess(WorkerStateEvent event) {
-        operationsMap.clear();
+        currentOperationsMap.clear();
         operationsAsync.getValue()
                 .parallelStream()
                 .forEach(operation -> {
-                    operationsMap.put(operation.getOperation(), operation);
+                    currentOperationsMap.put(operation.getOperation(), operation);
                 });
 
-        final List<WSDLOperation> operations = operationsMap
+        final List<WSDLOperation> operations = currentOperationsMap
                 .keySet()
                 .parallelStream()
                 .collect(Collectors.toList());
@@ -216,7 +207,7 @@ public class BonePresenter implements Initializable {
     @SuppressWarnings("ThrowableResultIgnored")
     private void handleOperationsAsyncFail(WorkerStateEvent event) {
         services.getItems().clear();
-        operationsMap.clear();
+        currentOperationsMap.clear();
         LOG.warning(
                 () -> {
                     return "Fetcher Service task failed "
@@ -244,9 +235,11 @@ public class BonePresenter implements Initializable {
         }
     }
 
+    // code that smells
     @FXML
     private void handleViewOwls() {
-        final Operation operation = operationsMap.get(services.selectionModelProperty().getValue().getSelectedItem());
+        final Operation operation = currentOperationsMap.get(services.selectionModelProperty().getValue().getSelectedItem());
+        
         final OWLSGeneratorAsync generatorAsync = OWLSGeneratorAsync.builder()
                 .name(serviceName.getText().trim())
                 .description(description.getText().trim())
@@ -255,17 +248,24 @@ public class BonePresenter implements Initializable {
                 .executor(executor)
                 .build();
         ViewUtils.bindWorkerToProgressIndicator(generatorAsync, progress);
+        
         generatorAsync.setOnSucceeded(event -> {
             final String title = operation.getOperation().getName().concat(".owls");
-            final Tab owlsEditor = new Tab(title);
+            final Tab tab = new Tab(title);
             final EditorView editorView = new EditorView();
-            ((EditorPresenter) editorView.getPresenter()).showFileContent(title, generatorAsync.getValue());
+            final EditorPresenter editorPresenter = (EditorPresenter) editorView.getPresenter();
+            editorPresenter.showFileContent(title, generatorAsync.getValue());
             final HBox box = (HBox) editorView.getView();
             // dirty hack!
             box.prefHeightProperty().bind(tabPane.heightProperty());
             box.prefWidthProperty().bind(tabPane.widthProperty());
-            owlsEditor.setContent(box);
-            tabPane.getTabs().add(owlsEditor);
+
+            tab.setContent(box);
+            tab.setOnClosed(e -> openedTabs.remove(tab));
+            openedTabs.put(tab, editorPresenter);
+            
+            tabPane.getTabs().add(tab);
+            
         });
         generatorAsync.start();
     }
@@ -299,14 +299,14 @@ public class BonePresenter implements Initializable {
             description.setText(Objects.requireNonNull(operation.getDescription(),
                     "Default description"));
 
-            inputs.itemsProperty().bind(new SimpleObjectProperty<>(operationsMap.get(operation).getInputs()));
-            outputs.itemsProperty().bind(new SimpleObjectProperty<>(operationsMap.get(operation).getOutputs()));
+            inputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getInputs()));
+            outputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getOutputs()));
         }
         Stream.of(inputs, outputs).forEach(ViewUtils::refreshTableView);
     }
 
     @FXML
     private void handleSaveOWLSFile() {
-        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();        
+        openedTabs.get(tabPane.getSelectionModel().getSelectedItem()).handleSaveFileContent();
     }
 }

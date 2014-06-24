@@ -34,19 +34,27 @@ THE SOFTWARE.
 <?import javafx.scene.control.cell.TextFieldTableCell?>
 <?import javafx.scene.control.cell.PropertyValueFactory?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="800.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8"  fx:controller="org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BonePresenter">
+<BorderPane fx:id="root" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="800.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BonePresenter">
     <top>
         <MenuBar fx:id="menu" BorderPane.alignment="CENTER">
             <menus>
                 <Menu mnemonicParsing="false" text="File">
                     <items>						
-                        <MenuItem fx:id="importWsdl" accelerator="Ctrl-I" mnemonicParsing="false" onAction="#handleImportWsdl" text="Import WSDL file...        " />
-                        <MenuItem mnemonicParsing="false" onAction="#handleSaveOWLSFile" text="Save OWLS file..." fx:id="saveOwlsFile" >
+                        <MenuItem fx:id="importWsdl" mnemonicParsing="false" onAction="#handleImportWsdl" text="Import WSDL file...        " >
+                                <accelerator>
+                                <KeyCodeCombination alt="UP" code="I" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                            </accelerator>
+                        </MenuItem>
+                        <MenuItem fx:id="saveOwlsFile" mnemonicParsing="false" onAction="#handleSaveOWLSFile" text="Save OWLS file...">
                             <accelerator>
                                 <KeyCodeCombination alt="UP" code="S" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                             </accelerator>
                         </MenuItem>                                      
-                        <MenuItem fx:id="exit" mnemonicParsing="false" onAction="#handleClose" text="Exit" />
+                        <MenuItem fx:id="exit" mnemonicParsing="false" onAction="#handleClose" text="Exit">
+                            <accelerator>
+                                <KeyCodeCombination alt="UP" code="Z" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                            </accelerator>
+                        </MenuItem>
                     </items>
                 </Menu>          
                 <Menu mnemonicParsing="false" text="Help">
@@ -61,7 +69,7 @@ THE SOFTWARE.
     <center>
         <TabPane fx:id="tabPane" tabClosingPolicy="ALL_TABS" BorderPane.alignment="CENTER">
             <tabs>
-                <Tab fx:id="generatorTab" text="Generator">
+                <Tab fx:id="generatorTab" closable="false" text="Generator">
                     <content>
                         <AnchorPane>
                             <children>

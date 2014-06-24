@@ -46,26 +46,27 @@ public class EditorPresenter implements Initializable {
 
     @FXML
     private WebView editor;
-
+    public volatile File current;
     private final String template
-            = "<!doctype html>"
-            + "<html>"
-            + "<head>"
-            + "<style>"
-            + "${css}"
-            + "</style>"
-            + "<script>"
-            + "${js}"
-            + "</script>"
-            + "</head>"
-            + "<body onload=\"prettyPrint()\">"
-            + "<pre class=\"prettyprint lang-xml\">"
-            + "<code>"
-            + "${content}"
-            + "</code>"
-            + "</pre>"
-            + "</body>"
-            + "</html>";
+            =String.join("",                 
+            "<!doctype html>",                                 
+             "<html>",
+             "<head>",
+             "<style>",
+             "${css}",
+             "</style>",
+             "<script>",
+             "${js}",
+             "</script>",
+             "</head>",
+             "<body onload=\"prettyPrint()\">",
+             "<pre class=\"prettyprint lang-xml\">",
+             "<code>",
+             "${content}",
+             "</code>",
+             "</pre>",
+             "</body>",
+             "</html>");
 
     /**
      * Initializes the controller class.
@@ -78,16 +79,22 @@ public class EditorPresenter implements Initializable {
         // TODO
     }
 
-    // Not Thread safe
-    // Must be invoked from the javafx application thread
-    public void showFileContent(String title, File file) {
+    // Not Thread safe    
+    public void showFileContent(String title, File file) {        
+                
         try {
             Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
                     .reduce((line1, line2) -> line1 + "\n" + line2);
-            owls.ifPresent(html -> editor.getEngine().loadContent(parse(html)));
+            this.current = file;
+            owls.ifPresent(xml ->  editor.getEngine().loadContent(parse(xml)));
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, ex.getMessage());
         }
+    }
+    
+    @FXML
+    public void handleSaveFileContent() {
+        LOG.info(this.current.getName());
     }
 
     private String parse(String owls) {
@@ -106,5 +113,5 @@ public class EditorPresenter implements Initializable {
             Logger.getLogger(EditorPresenter.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
-    }
+    }   
 }
