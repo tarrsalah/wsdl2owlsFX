@@ -42,6 +42,8 @@ import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
@@ -88,7 +90,7 @@ public class BonePresenter implements Initializable {
     private Tab generatorTab;
 
     @FXML
-    private MenuItem importWsdl, exit;
+    private MenuItem importWsdl, exit, saveOwlsFile;
 
     @FXML
     private TextField wsdlURL;
@@ -97,13 +99,10 @@ public class BonePresenter implements Initializable {
     private Button viewOWLS;
 
     @FXML
-    private TextField serviceName;
+    private TextField serviceName, logicalURI;
 
     @FXML
     private TextArea description;
-
-    @FXML
-    private TextField logicalURI;
 
     @FXML
     private ComboBox<WSDLOperation> services;
@@ -118,10 +117,7 @@ public class BonePresenter implements Initializable {
     private TableView namespaces;
 
     @FXML
-    private TableColumn namespaceAbbr;
-
-    @FXML
-    private TableColumn namespaceURL;
+    private TableColumn namespaceAbbr, namespaceURL;
 
     @FXML
     private Button remove;
@@ -147,11 +143,13 @@ public class BonePresenter implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
 
-        generatorTab.setClosable(false);
+        generatorTab.setClosable(false);        
         importWsdl.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCodeCombination.CONTROL_DOWN));
         exit.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCodeCombination.CONTROL_DOWN));
         viewOWLS.disableProperty().bind(services.valueProperty().isNull());
         services.disableProperty().bind(services.valueProperty().isNull());
+        
+        saveOwlsFile.disableProperty().bind(generatorTab.selectedProperty());
 
         operationsAsync.setExecutor(executor);
         operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
@@ -241,6 +239,7 @@ public class BonePresenter implements Initializable {
                 (Stage) generatorTab.getTabPane().getParent().getScene().getWindow());
         if (Objects.nonNull(selectedFile)) {
             wsdlURL.setText(selectedFile.toURI().toString());
+            tabPane.getSelectionModel().select(generatorTab);
             handleWsdlUrl();
         }
     }
@@ -304,5 +303,10 @@ public class BonePresenter implements Initializable {
             outputs.itemsProperty().bind(new SimpleObjectProperty<>(operationsMap.get(operation).getOutputs()));
         }
         Stream.of(inputs, outputs).forEach(ViewUtils::refreshTableView);
+    }
+
+    @FXML
+    private void handleSaveOWLSFile() {
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();        
     }
 }
