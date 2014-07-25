@@ -86,7 +86,7 @@ public class EditorPresenter implements Initializable {
             Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
                     .reduce((line1, line2) -> line1 + "\n" + line2);
             this.current = file;
-            owls.ifPresent(xml ->  editor.getEngine().loadContent(parse(xml)));
+            owls.ifPresent(xml ->  editor.getEngine().loadContent(this.parse(xml)));
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, ex.getMessage());
         }
@@ -97,6 +97,7 @@ public class EditorPresenter implements Initializable {
         LOG.info(this.current.getName());
     }
 
+    // TO be Improved
     private String parse(String owls) {
         try {
             return template.replace("${content}", owls.replace("<", "&lt;")

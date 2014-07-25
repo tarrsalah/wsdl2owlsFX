@@ -44,7 +44,7 @@ public class Operation {
         this.operation = operation;
     }
 
-    public static Operation get(WSDLOperation operation) {
+    public static Operation wrap(WSDLOperation operation) {
         return new Operation(operation);
     }
 

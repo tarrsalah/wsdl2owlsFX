@@ -27,7 +27,6 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OWLSGeneratorAsync;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BonePresenter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone.BoneView;
 

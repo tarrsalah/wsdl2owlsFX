@@ -24,12 +24,14 @@
 package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -62,8 +64,8 @@ import javafx.util.StringConverter;
 import javax.inject.Inject;
 import org.mindswap.wsdl.WSDLOperation;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OWLSGeneratorAsync;
-import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OperationsAsync;
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Parameter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.ViewUtils;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorPresenter;
@@ -86,7 +88,7 @@ public class BonePresenter implements Initializable {
     private Tab generatorTab;
 
     @FXML
-    private MenuItem importWsdl, exit, saveOwlsFile;
+    private MenuItem saveOwlsFile;
 
     @FXML
     private TextField wsdlURL;
@@ -129,7 +131,7 @@ public class BonePresenter implements Initializable {
 
     public BonePresenter() {
         this.currentOperationsMap = new HashMap<>();
-        this.openedTabs = new HashMap<>();
+        this.openedTabs = new WeakHashMap<>();
     }
 
     /**
@@ -144,6 +146,7 @@ public class BonePresenter implements Initializable {
         services.disableProperty().bind(services.valueProperty().isNull());
         saveOwlsFile.disableProperty().bind(generatorTab.selectedProperty());
         remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
+
         operationsAsync.setExecutor(executor);
         operationsAsync.wsdlURLProperty().bind(wsdlURL.textProperty());
         operationsAsync.setOnSucceeded(this::handleOperationsAsyncSuccess);
@@ -238,8 +241,11 @@ public class BonePresenter implements Initializable {
     // code that smells
     @FXML
     private void handleViewOwls() {
-        final Operation operation = currentOperationsMap.get(services.selectionModelProperty().getValue().getSelectedItem());
-        
+        final Operation operation = currentOperationsMap
+                .get(services.selectionModelProperty()
+                        .getValue()
+                        .getSelectedItem());
+
         final OWLSGeneratorAsync generatorAsync = OWLSGeneratorAsync.builder()
                 .name(serviceName.getText().trim())
                 .description(description.getText().trim())
@@ -247,26 +253,31 @@ public class BonePresenter implements Initializable {
                 .operation(operation)
                 .executor(executor)
                 .build();
+
         ViewUtils.bindWorkerToProgressIndicator(generatorAsync, progress);
-        
-        generatorAsync.setOnSucceeded(event -> {
+        // TOOD hunt the memory leak 
+        generatorAsync.setOnSucceeded((event -> {
             final String title = operation.getOperation().getName().concat(".owls");
             final Tab tab = new Tab(title);
             final EditorView editorView = new EditorView();
             final EditorPresenter editorPresenter = (EditorPresenter) editorView.getPresenter();
             editorPresenter.showFileContent(title, generatorAsync.getValue());
             final HBox box = (HBox) editorView.getView();
+            final WeakReference<TabPane> tabePaneReference = new WeakReference<>(tabPane);
+            final WeakReference<Map<Tab, EditorPresenter>> openedTabsReference = new WeakReference<>(openedTabs);
             // dirty hack!
-            box.prefHeightProperty().bind(tabPane.heightProperty());
-            box.prefWidthProperty().bind(tabPane.widthProperty());
-
+            box.prefHeightProperty().bind(tabePaneReference.get().heightProperty());
+            box.prefWidthProperty().bind(tabePaneReference.get().widthProperty());
+            openedTabsReference.get().put(tab, editorPresenter);
+            tabePaneReference.get().getTabs().add(tab);
             tab.setContent(box);
-            tab.setOnClosed(e -> openedTabs.remove(tab));
-            openedTabs.put(tab, editorPresenter);
-            
-            tabPane.getTabs().add(tab);
-            
-        });
+            tab.setOnCloseRequest(e -> {
+                openedTabsReference.get().remove(tab);
+                box.prefWidthProperty().unbind();
+                box.prefHeightProperty().unbind();
+            });
+
+        }));        
         generatorAsync.start();
     }
 
@@ -297,8 +308,8 @@ public class BonePresenter implements Initializable {
             serviceName.setText(Objects.requireNonNull(operation.getName(),
                     "Default name"));
             description.setText(Objects.requireNonNull(operation.getDescription(),
-                    "Default description"));
 
+                    "Default description"));
             inputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getInputs()));
             outputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getOutputs()));
         }

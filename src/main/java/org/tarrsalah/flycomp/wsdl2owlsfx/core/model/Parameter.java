@@ -52,6 +52,7 @@ public class Parameter {
     private static final QNameProvider qnames = new QNameProvider();
 
     private final WSDLParameter initialParameter;
+    
     private final StringProperty wsdlName = new SimpleStringProperty();
     private final StringProperty wsdlType = new SimpleStringProperty();
     private final StringProperty owlsName = new SimpleStringProperty();

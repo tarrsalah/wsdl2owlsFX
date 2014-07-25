@@ -60,7 +60,7 @@ public  class OperationsAsync extends Service<List<Operation>> {
             protected List<Operation> call() throws Exception {
                 return WSDLService.createService(wsdlURL.getValue()).getOperations()
                         .stream()
-                        .map(Operation::get)
+                        .map(Operation::wrap)
                         .collect(Collectors.toList());
             }
         };
