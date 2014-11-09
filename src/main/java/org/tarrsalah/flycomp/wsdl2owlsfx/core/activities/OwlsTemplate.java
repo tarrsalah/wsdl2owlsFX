@@ -21,31 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor;
+package org.tarrsalah.flycomp.wsdl2owlsfx.core.activities;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Optional;
-import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.web.WebView;
 
-public class EditorPresenter implements Initializable {
+public class OwlsTemplate {
 
-    private static final Logger LOG = Logger.getLogger(EditorPresenter.class.getName());
+    private static final Logger LOG = Logger.getLogger(OwlsTemplate.class.getName());
     private final String JS_FILE = "file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/prettify.js";
     private final String CSS_FILE = "file:///home/tarrsalah/src/github.com/tarrsalah/wsdl2owlsFX/src/main/resources/prettify.css";
-
-    @FXML
-    private WebView editor;
+    
     public volatile File current;
     private final String template
             =String.join("",                 
@@ -68,29 +60,7 @@ public class EditorPresenter implements Initializable {
              "</body>",
              "</html>");
 
-    /**
-     * Initializes the controller class.
-     *
-     * @param url
-     * @param rb
-     */
-    @Override
-    public void initialize(URL url, ResourceBundle rb) {
-        // TODO
-    }
-
-    // Not Thread safe    
-    public void showFileContent(String title, File file) {        
-                
-        try {
-            Optional<String> owls = Files.lines(file.toPath(), Charset.forName("UTF-8"))
-                    .reduce((line1, line2) -> line1 + "\n" + line2);
-            this.current = file;
-            owls.ifPresent(xml ->  editor.getEngine().loadContent(this.parse(xml)));
-        } catch (IOException ex) {
-            LOG.log(Level.SEVERE, ex.getMessage());
-        }
-    }
+    
     
     @FXML
     public void handleSaveFileContent() {
@@ -98,7 +68,7 @@ public class EditorPresenter implements Initializable {
     }
 
     // TO be Improved
-    private String parse(String owls) {
+    public String parse(String owls) {
         try {
             return template.replace("${content}", owls.replace("<", "&lt;")
                     .replace(">", "&gt;"))
@@ -111,7 +81,7 @@ public class EditorPresenter implements Initializable {
                                     ))
                             .reduce((line1, line2) -> line1 + "\n" + line2).orElse(""));
         } catch (IOException ex) {
-            Logger.getLogger(EditorPresenter.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(OwlsTemplate.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }   

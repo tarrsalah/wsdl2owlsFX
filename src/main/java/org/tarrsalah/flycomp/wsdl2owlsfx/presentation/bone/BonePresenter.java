@@ -23,15 +23,18 @@
  */
 package org.tarrsalah.flycomp.wsdl2owlsfx.presentation.bone;
 
+import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OwlsTemplate;
 import java.io.File;
-import java.lang.ref.WeakReference;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ResourceBundle;
-import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -39,7 +42,9 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.fxml.FXML;
@@ -56,7 +61,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.layout.HBox;
+import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
@@ -68,8 +73,6 @@ import org.tarrsalah.flycomp.wsdl2owlsfx.core.activities.OperationsAsync;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Operation;
 import org.tarrsalah.flycomp.wsdl2owlsfx.core.model.Parameter;
 import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.ViewUtils;
-import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorPresenter;
-import org.tarrsalah.flycomp.wsdl2owlsfx.presentation.editor.EditorView;
 
 /**
  * FXML Controller class
@@ -85,7 +88,7 @@ public class BonePresenter implements Initializable {
     private TabPane tabPane;
 
     @FXML
-    private Tab generatorTab;
+    private Tab generatorTab, browserTab;
 
     @FXML
     private MenuItem saveOwlsFile;
@@ -118,7 +121,10 @@ public class BonePresenter implements Initializable {
     private TableColumn namespaceAbbr, namespaceURL;
 
     @FXML
-    private Button remove;
+    private Button remove, saveOwlsFileButton;
+
+    @FXML
+    private WebView browser;
 
     @FXML
     private ProgressIndicator progress;
@@ -126,25 +132,18 @@ public class BonePresenter implements Initializable {
     @Inject
     private OperationsAsync operationsAsync;
 
-    private final Map<WSDLOperation, Operation> currentOperationsMap;
-    private final Map<Tab, EditorPresenter> openedTabs;
+    @Inject
+    private OwlsTemplate template;
 
-    public BonePresenter() {
-        this.currentOperationsMap = new HashMap<>();
-        this.openedTabs = new WeakHashMap<>();
-    }
+    private final ObservableBooleanValue empty = new SimpleBooleanProperty(true);
 
-    /**
-     * Initializes the controller class.
-     *
-     * @param url
-     * @param rb
-     */
+    private final Map<WSDLOperation, Operation> currentOperationsMap= new HashMap<>();    
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         viewOWLS.disableProperty().bind(services.valueProperty().isNull());
         services.disableProperty().bind(services.valueProperty().isNull());
-        saveOwlsFile.disableProperty().bind(generatorTab.selectedProperty());
+        saveOwlsFile.disableProperty().bind(generatorTab.selectedProperty().and(empty));
         remove.disableProperty().bind(namespaces.selectionModelProperty().isNotNull());
 
         operationsAsync.setExecutor(executor);
@@ -190,7 +189,6 @@ public class BonePresenter implements Initializable {
                 .forEach(operation -> {
                     currentOperationsMap.put(operation.getOperation(), operation);
                 });
-
         final List<WSDLOperation> operations = currentOperationsMap
                 .keySet()
                 .parallelStream()
@@ -198,7 +196,7 @@ public class BonePresenter implements Initializable {
 
         services.setItems(FXCollections.observableArrayList(operations));
         operations.stream().findFirst().ifPresent(services::setValue);
-        handleServices();
+        this.handleServices();
         LOG.log(Level.INFO,
                 () -> {
                     return String.join(" ", "Fetching from",
@@ -254,30 +252,23 @@ public class BonePresenter implements Initializable {
                 .executor(executor)
                 .build();
 
-        ViewUtils.bindWorkerToProgressIndicator(generatorAsync, progress);
-        // TOOD hunt the memory leak 
+        ViewUtils.bindWorkerToProgressIndicator(generatorAsync, progress);        
         generatorAsync.setOnSucceeded((event -> {
-            final String title = operation.getOperation().getName().concat(".owls");
-            final Tab tab = new Tab(title);
-            final EditorView editorView = new EditorView();
-            final EditorPresenter editorPresenter = (EditorPresenter) editorView.getPresenter();
-            editorPresenter.showFileContent(title, generatorAsync.getValue());
-            final HBox box = (HBox) editorView.getView();
-            final WeakReference<TabPane> tabePaneReference = new WeakReference<>(tabPane);
-            final WeakReference<Map<Tab, EditorPresenter>> openedTabsReference = new WeakReference<>(openedTabs);
-            // dirty hack!
-            box.prefHeightProperty().bind(tabePaneReference.get().heightProperty());
-            box.prefWidthProperty().bind(tabePaneReference.get().widthProperty());
-            openedTabsReference.get().put(tab, editorPresenter);
-            tabePaneReference.get().getTabs().add(tab);
-            tab.setContent(box);
-            tab.setOnCloseRequest(e -> {
-                openedTabsReference.get().remove(tab);
-                box.prefWidthProperty().unbind();
-                box.prefHeightProperty().unbind();
-            });
+            try {
+                final String title = operation.getOperation().getName().concat(".owls");
 
-        }));        
+                Optional<String> owls = Files.lines(generatorAsync.getValue().toPath(),
+                        Charset.forName("UTF-8")).
+                        reduce((String line1, String line2) -> line1 + "\n" + line2);
+
+                browser.getEngine().loadContent(template.parse(owls.orElse("")));
+                browserTab.setText(title);
+                tabPane.getSelectionModel().select(browserTab);
+                saveOwlsFileButton.setDisable(false);
+            } catch (IOException ex) {
+                LOG.log(Level.SEVERE, null, ex);
+            }
+        }));
         generatorAsync.start();
     }
 
@@ -308,7 +299,6 @@ public class BonePresenter implements Initializable {
             serviceName.setText(Objects.requireNonNull(operation.getName(),
                     "Default name"));
             description.setText(Objects.requireNonNull(operation.getDescription(),
-
                     "Default description"));
             inputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getInputs()));
             outputs.itemsProperty().bind(new SimpleObjectProperty<>(currentOperationsMap.get(operation).getOutputs()));
@@ -318,6 +308,6 @@ public class BonePresenter implements Initializable {
 
     @FXML
     private void handleSaveOWLSFile() {
-        openedTabs.get(tabPane.getSelectionModel().getSelectedItem()).handleSaveFileContent();
+        LOG.info("handleSaveOWLSFile");
     }
 }
